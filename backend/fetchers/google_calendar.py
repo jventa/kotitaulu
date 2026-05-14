@@ -23,6 +23,9 @@ async def fetch() -> list[FetchResult]:
     cfg = SOURCES.get("google_calendar", {})
     if not cfg.get("enabled", True):
         return []
+    import os
+    if not os.path.exists(GOOGLE_TOKEN_FILE):
+        return []
 
     days_ahead = cfg.get("days_ahead", 7)
     tz = ZoneInfo(LOCATION.get("timezone", "Europe/Helsinki"))

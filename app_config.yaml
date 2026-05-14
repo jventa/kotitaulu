@@ -21,7 +21,7 @@ sources:
     enabled: true
     entities:
       - sensor.koti_venta_outdoor_temperature
-      - binary_sensor.front_door
+      - sensor.ruuvitag_9d2f_temperature
     todo_lists:
       - todo.shopping_list
 
