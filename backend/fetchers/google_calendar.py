@@ -33,28 +33,38 @@ async def fetch() -> list[FetchResult]:
     creds = _load_creds()
     service = build("calendar", "v3", credentials=creds, cache_discovery=False)
 
-    events_result = (
-        service.events()
-        .list(
-            calendarId="primary",
-            timeMin=time_min,
-            timeMax=time_max,
-            singleEvents=True,
-            orderBy="startTime",
-        )
-        .execute()
-    )
+    calendars = service.calendarList().list().execute().get("items", [])
 
+    seen_ids = set()
     results = []
-    for event in events_result.get("items", []):
-        start = event["start"].get("dateTime", event["start"].get("date"))
-        results.append(
-            FetchResult(
-                source=SOURCE,
-                title=event.get("summary", "(ei otsikkoa)"),
-                detail=event.get("location") or event.get("description"),
-                time=start,
-                url=event.get("htmlLink"),
+    for cal in calendars:
+        cal_id = cal["id"]
+        events_result = (
+            service.events()
+            .list(
+                calendarId=cal_id,
+                timeMin=time_min,
+                timeMax=time_max,
+                singleEvents=True,
+                orderBy="startTime",
             )
+            .execute()
         )
+        for event in events_result.get("items", []):
+            event_id = event.get("id")
+            if event_id in seen_ids:
+                continue
+            seen_ids.add(event_id)
+            start = event["start"].get("dateTime", event["start"].get("date"))
+            results.append(
+                FetchResult(
+                    source=SOURCE,
+                    title=event.get("summary", "(ei otsikkoa)"),
+                    detail=event.get("location") or event.get("description"),
+                    time=start,
+                    url=event.get("htmlLink"),
+                )
+            )
+
+    results.sort(key=lambda r: r.time or "")
     return results
