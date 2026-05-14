@@ -1,4 +1,4 @@
-FROM ghcr.io/home-assistant/aarch64-base-python:3.13-alpine3.23
+FROM python:3.12-slim
 
 WORKDIR /app
 
