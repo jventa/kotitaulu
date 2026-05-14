@@ -23,7 +23,9 @@ map:
 options:
   google_credentials_file: "credentials.json"
   google_token_file: "token.json"
+  ha_token: ""
 
 schema:
   google_credentials_file: str
   google_token_file: str
+  ha_token: str
