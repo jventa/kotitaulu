@@ -50,7 +50,7 @@ _google_creds_file = _addon_opts.get("google_credentials_file", _get("GOOGLE_CRE
 GOOGLE_CREDENTIALS_FILE: str = str(_CONFIG_DIR / _google_creds_file)
 GOOGLE_TOKEN_FILE: str = str(_CONFIG_DIR / _google_token_file)
 
-SCRAPINGBEE_API_KEY: str = _get("SCRAPINGBEE_API_KEY", "")
+SCRAPINGBEE_API_KEY: str = _addon_opts.get("scrapingbee_api_key") or _get("SCRAPINGBEE_API_KEY", "")
 
 LOCATION: dict = _cfg.get("location", {"lat": 60.1699, "lon": 24.9384, "timezone": "Europe/Helsinki"})
 SCHEDULER: dict = _cfg.get("scheduler", {"daily_refresh_hour": 6, "daily_refresh_minute": 0})
