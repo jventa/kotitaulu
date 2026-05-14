@@ -1,0 +1,54 @@
+location:
+  lat: 60.1699
+  lon: 24.9384
+  timezone: Europe/Helsinki
+
+scheduler:
+  daily_refresh_hour: 6
+  daily_refresh_minute: 0
+
+sources:
+  google_calendar:
+    enabled: true
+    days_ahead: 7
+
+  gmail:
+    enabled: true
+    max_results: 10
+    query: "is:unread is:important"
+
+  home_assistant:
+    enabled: true
+    entities:
+      - sensor.koti_venta_outdoor_temperature
+      - binary_sensor.front_door
+    todo_lists:
+      - todo.shopping_list
+
+  weather:
+    enabled: true
+
+  rss:
+    enabled: true
+    feeds:
+      - url: "https://www.hs.fi/rss/tuoreimmat.xml"
+        title: "Helsingin Sanomat"
+        max_items: 5
+      - url: "https://feeds.yle.fi/uutiset/v1/recent.rss?publisherIds=YLE_UUTISET"
+        title: "Yle Uutiset"
+        max_items: 5
+
+  stocks:
+    enabled: true
+    symbols:
+      - NOKIA.HE
+      - KNEBV.HE
+
+  web_scrapers:
+    enabled: true
+    sites:
+      - url: "https://www.kauhavanseurakunta.fi/tapahtumat"
+        title: "Kauhavan seurakunta"
+        selector: ".tribe-events-calendar-list__event-title-link"
+        max_items: 5
+        render_js: true

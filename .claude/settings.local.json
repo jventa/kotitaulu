@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"/Users/jventa/Library/Group Containers/UBF8T346G9.OneDriveSyncClientSuite/OneDrive.noindex/OneDrive/code/kotitaulu\")",
+      "Read(//Users/jventa/Library/Group Containers/UBF8T346G9.OneDriveSyncClientSuite/OneDrive.noindex/OneDrive/code/kotitaulu/**)",
+      "Bash(cd /Users/jventa && find . -name \"*kotitaulu*\" -type f 2>/dev/null | head -20)",
+      "Read(//Users/jventa/**)",
+      "Bash(find /Users/jventa -name \"package.json\" -o -name \"tsconfig.json\" -o -name \"next.config.js\" 2>/dev/null | grep -v node_modules | grep -v \".cache\" | head -20)",
+      "WebFetch(domain:www.kauhavanseurakunta.fi)"
+    ]
+  }
+}

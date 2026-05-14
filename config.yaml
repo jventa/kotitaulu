@@ -1,0 +1,29 @@
+name: "Kotitaulu"
+description: "Kodin päivittäinen muistitaulu — kalenteri, sää, HA, uutiset"
+version: "1.0.0"
+slug: "kotitaulu"
+init: false
+homeassistant_api: true
+auth_api: true
+
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+
+ports:
+  8000/tcp: 8000
+ports_description:
+  8000/tcp: "Kotitaulu web UI"
+
+map:
+  - config:rw
+
+options:
+  google_credentials_file: "credentials.json"
+  google_token_file: "token.json"
+
+schema:
+  google_credentials_file: str
+  google_token_file: str
