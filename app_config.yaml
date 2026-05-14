@@ -10,7 +10,7 @@ scheduler:
 sources:
   google_calendar:
     enabled: true
-    days_ahead: 7
+    days_ahead: 5
 
   gmail:
     enabled: true
