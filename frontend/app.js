@@ -104,22 +104,14 @@ async function loadItems() {
     const board = document.getElementById("board");
     board.innerHTML = "";
 
-    const order = ["weather", "google_calendar", "kauhavan_seurakunta", "home_assistant", "gmail", "rss", "stocks", "web_scraper"];
+    const order = [
+      "weather", "google_calendar", "kauhavan_seurakunta",
+      "home_assistant", "rss", "stocks", "gmail", "web_scraper",
+    ];
     const sources = data.sources || {};
-    const seen = new Set();
 
     for (const src of order) {
-      if (sources[src]) {
-        board.appendChild(buildCard(src, sources[src]));
-        seen.add(src);
-      }
-    }
-    for (const src of Object.keys(sources)) {
-      if (!seen.has(src)) board.appendChild(buildCard(src, sources[src]));
-    }
-
-    if (Object.keys(sources).length === 0) {
-      board.innerHTML = '<p class="empty">Ei tietoja — käynnistä haku painamalla &#x21bb;</p>';
+      board.appendChild(buildCard(src, sources[src] || []));
     }
 
     document.getElementById("last-updated").textContent =
