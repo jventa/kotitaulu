@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
-from backend.config import SCRAPINGBEE_API_KEY
+from backend.config import FLARESOLVERR_URL, SCRAPINGBEE_API_KEY
 from backend.fetchers import FetchResult
 
 SOURCE = "kauhavan_seurakunta"
@@ -37,12 +37,17 @@ def _parse_time(time_str: str) -> str | None:
     return f"{int(m.group(1)):02d}:{m.group(2)}"
 
 
-async def fetch() -> list[FetchResult]:
-    today = date.today()
-    tomorrow = today + timedelta(days=1)
-    target_dates = {today, tomorrow}
-
+async def _get_html() -> str:
     async with httpx.AsyncClient(timeout=60) as client:
+        if FLARESOLVERR_URL:
+            resp = await client.post(
+                f"{FLARESOLVERR_URL.rstrip('/')}/v1",
+                json={"cmd": "request.get", "url": URL, "maxTimeout": 60000},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("status") == "ok":
+                return data["solution"]["response"]
         resp = await client.get(
             SCRAPINGBEE_URL,
             params={
@@ -54,7 +59,15 @@ async def fetch() -> list[FetchResult]:
             },
         )
         resp.raise_for_status()
-        html = resp.text
+        return resp.text
+
+
+async def fetch() -> list[FetchResult]:
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
+    target_dates = {today, tomorrow}
+
+    html = await _get_html()
 
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(html, "html.parser")
