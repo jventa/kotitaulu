@@ -44,6 +44,7 @@ sources:
       - NOKIA.HE
       - KNEBV.HE
       - EVLI.HE
+      - QTCOM.HE
 
   web_scrapers:
     enabled: true
