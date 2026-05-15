@@ -43,6 +43,7 @@ sources:
     symbols:
       - NOKIA.HE
       - KNEBV.HE
+      - EVLI.HE
 
   web_scrapers:
     enabled: true
