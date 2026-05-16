@@ -48,6 +48,7 @@ sources:
 
   web_scrapers:
     enabled: true
+    flaresolverr_url: "http://homeassistant.local:8191"
     sites:
       - url: "https://www.kauhavanseurakunta.fi/tapahtumat"
         title: "Kauhavan seurakunta"
