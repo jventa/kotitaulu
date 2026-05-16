@@ -51,7 +51,7 @@ GOOGLE_CREDENTIALS_FILE: str = str(_CONFIG_DIR / _google_creds_file)
 GOOGLE_TOKEN_FILE: str = str(_CONFIG_DIR / _google_token_file)
 
 SCRAPINGBEE_API_KEY: str = _addon_opts.get("scrapingbee_api_key") or _get("SCRAPINGBEE_API_KEY", "")
-FLARESOLVERR_URL: str = _addon_opts.get("flaresolverr_url") or _get("FLARESOLVERR_URL", "")
+FLARESOLVERR_URL: str = _addon_opts.get("flaresolverr_url") or _get("FLARESOLVERR_URL") or _cfg.get("flaresolverr_url", "")
 
 LOCATION: dict = _cfg.get("location", {"lat": 60.1699, "lon": 24.9384, "timezone": "Europe/Helsinki"})
 SCHEDULER: dict = _cfg.get("scheduler", {"daily_refresh_hour": 6, "daily_refresh_minute": 0})
