@@ -37,11 +37,12 @@ async def fetch() -> list[FetchResult]:
             resp = await client.post(
                 f"{HA_URL}/api/services/todo/get_items",
                 headers=headers,
-                json={"entity_id": list_entity, "status": ["needs_action"]},
+                json={"entity_id": list_entity},
             )
             if resp.status_code in (200, 201):
                 items = resp.json()
-                for item in items.get("response", {}).get(list_entity, {}).get("items", []):
+                all_items = items.get("response", {}).get(list_entity, {}).get("items", [])
+                for item in [i for i in all_items if i.get("status", "needs_action") == "needs_action"]:
                     results.append(
                         FetchResult(
                             source=SOURCE,
