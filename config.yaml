@@ -25,7 +25,7 @@ options:
   google_token_file: "token.json"
   ha_token: ""
   scrapingbee_api_key: ""
-  flaresolverr_url: ""
+  flaresolverr_url: "http://192.168.8.247:8191"
 
 schema:
   google_credentials_file: str
