@@ -25,12 +25,13 @@ sources:
       - sensor.koti_venta_outdoor_temperature
       - sensor.ruuvitag_9d2f_temperature
       - nordpool_kwh_fi_eur_3_10_0255
+      - climate.huonetermostaatti
     todo_lists:
       - todo.shopping_list
 
   weather:
     enabled: true
-    
+
 
   rss:
     enabled: true
@@ -49,7 +50,7 @@ sources:
       - KNEBV.HE
       - EVLI.HE
       - QTCOM.HE
-
+      - SIILI.HE
   web_scrapers:
     enabled: true
     flaresolverr_url: "http://homeassistant.local:8191"
