@@ -80,8 +80,8 @@ main#board {
 /* ── Grid placement ── */
 .source-card[data-source="weather"]             { grid-column: 1; grid-row: 1; }
 .source-card[data-source="stocks"]              { grid-column: 1; grid-row: 2; }
-.source-card[data-source="google_calendar"]     { grid-column: 2; grid-row: 1; }
-.source-card[data-source="kauhavan_seurakunta"] { grid-column: 2; grid-row: 2; }
+.source-card[data-source="kauhavan_seurakunta"] { grid-column: 2; grid-row: 1; }
+.source-card[data-source="google_calendar"]     { grid-column: 2; grid-row: 2; }
 .source-card[data-source="home_assistant"]      { grid-column: 3; grid-row: 1; }
 .source-card[data-source="rss"]                 { grid-column: 3; grid-row: 2; }
 .source-card[data-source="gmail"]               { display: none; }
