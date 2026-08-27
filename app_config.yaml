@@ -25,7 +25,7 @@ sources:
       - sensor.koti_venta_outdoor_temperature
       - sensor.ruuvitag_1cf0_lampotila
       - sensor.ruuvitag_9d2f_temperature
-      - nordpool_kwh_fi_eur_3_10_0255
+      - sensor.nordpool
       - climate.huonetermostaatti
     todo_lists:
       - todo.shopping_list
