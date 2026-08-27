@@ -1,16 +1,37 @@
 # Kotitaulu — määrittelydokumentti
 
-**Versio:** 1.0.0
-**Päivitetty:** 2026-08-26
-**Tila:** Kuvaa nykyistä toteutusta (reverse-engineered koodista)
+**Versio:** 1.0.1
+**Päivitetty:** 2026-08-27
+**Tila:** Kuvaa nykyistä toteutusta (reverse-engineered koodista) + tiedossa olevia jatkokehitystarpeita
 
 ## 1. Tarkoitus ja tavoite
 
 Kotitaulu on kodin seinälle/tabletille tarkoitettu **päivittäinen muistitaulu**, joka kokoaa yhdelle näkymälle perheen kannalta olennaisen ajantasaisen tiedon: kalenteritapahtumat, tärkeät sähköpostit, kodin älylaitteiden tilat ja ostoslistat, sään, uutisotsikot, osakekurssit sekä paikallisia tapahtumia. Tavoitteena on korvata jääkaapin muistilaput ja useiden sovellusten erillinen tarkistaminen yhdellä automaattisesti päivittyvällä näytöllä, joka toimii ilman käyttäjän aktiivista vuorovaikutusta.
 
-Sovellus on suunniteltu ajettavaksi joko itsenäisenä palveluna kotiverkossa (esim. Raspberry Pi + kioski-selain seinätaulussa) tai **Home Assistant -lisäosana** (add-on).
+**Käytössä oleva ajoympäristö on kaksi erillistä Raspberry Pi -laitetta:**
+
+1. **HA-palvelin** (Raspberry Pi, ajaa Home Assistantia) — Kotitaulu ajetaan tällä **HA-lisäosana** (add-on), asennettuna GitHub-repositoriosta (`https://github.com/jventa/kotitaulu`).
+2. **Näyttö-Pi** (Raspberry Pi 3 + kytketty kosketusnäyttö) — erillinen laite, jolla pyörii selain kioskitilassa ja joka näyttää HA-palvelimen tarjoaman web-käyttöliittymän (`http://<ha-palvelin>:8000`) verkon yli.
+
+Tämä kahden laitteen jako on tietoinen arkkitehtuurivalinta: sovelluslogiikka ja data-integraatiot (Google, HA, sää, uutiset…) pysyvät HA-palvelimella, kun taas näyttöyksikkö on kevyt, tilaton kioski-pääte joka voidaan tarvittaessa vaihtaa tai käynnistää uudelleen vaikuttamatta dataan.
 
 ## 2. Arkkitehtuuri
+
+### 2.1 Fyysinen topologia
+
+```
+┌───────────────────────────────┐        ┌──────────────────────────────────┐
+│  NÄYTTÖ-PI (Raspberry Pi 3)    │  HTTP  │  HA-PALVELIN (Raspberry Pi)       │
+│  + kytketty kosketusnäyttö     │◄──────►│  Home Assistant OS/Supervised     │
+│  Chromium kioskitilassa        │  LAN   │  └─ Kotitaulu-lisäosa (Docker)    │
+│  (ei sovelluslogiikkaa,        │        │      koko backend + frontend     │
+│   vain selain + kosketus)      │        │      kts. kaavio alla            │
+└───────────────────────────────┘        └──────────────────────────────────┘
+```
+
+Näyttö-Pi ei aja mitään Kotitaulun koodia — se on pelkkä selainpääte, joka lataa HA-palvelimen tarjoaman sivun (`http://<ha-palvelin>:8000`) verkon yli. Kaikki data, ajastus ja integraatiot elävät yksinomaan HA-palvelimella ajettavassa lisäosassa.
+
+### 2.2 Sovelluksen sisäinen arkkitehtuuri (HA-palvelimella ajettava lisäosa)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -175,6 +196,54 @@ Sovellus avautuu osoitteessa `http://localhost:8000`. Manuaalinen haku: `curl -X
 
 **Home Assistant -lisäosana:** repositorio lisätään HA:n add-on-lähteeksi, `config.yaml`/`build.yaml` ohjaavat asennuksen ja optioiden UI:n muodostumisen kaikille tuetuille arkkitehtuureille.
 
+### 10.1 Päivitysvirta: tästä kehityshakemistosta HA-palvelimelle
+
+Kotitaulua **ei** päivitetä kopioimalla tiedostoja käsin HA-palvelimelle — päivitys kulkee kokonaan Git-repositorion kautta, koska lisäosa on asennettu HA:n Add-on Storeen repositorio-lähteenä (ei paikallisena/local-lisäosana):
+
+```
+tämä hakemisto (kehitys)
+   │  git commit + git push
+   ▼
+GitHub: github.com/jventa/kotitaulu (origin/master)
+   │  HA Supervisor pollaa/pullaa repositorion sisällön
+   ▼
+HA Add-on Store havaitsee version noston config.yaml:ssa
+   │  käyttäjä (tai automaatio) painaa "Update" → Supervisor rakentaa imagen build.yaml:n mukaan
+   ▼
+Kotitaulu-lisäosa käynnistyy uudelleen HA-palvelimella
+```
+
+**Ehdot, jotta päivitys näkyy automaattisesti:**
+1. Muutokset on pushattu `master`-haaraan GitHubissa (paikallinen `git commit` ei riitä).
+2. `config.yaml`:n `version`-kenttää **on nostettu** edelliseen julkaistuun versioon nähden — HA Supervisor vertailee vain tätä kenttää, ei commit-historiaa tai tiedostosisältöä.
+3. HA on hakenut repositorion tuoreen tilan — tämä tapahtuu joko Supervisorin omalla ajastetulla tarkistuksella, tai manuaalisesti: *Lisäosakauppa → ⋮ → Reload/Tarkista päivitykset*.
+
+Kun nämä kolme ehtoa täyttyvät, Add-on Store näyttää "Update available" ilman että HA-palvelimelle tarvitsee ottaa erikseen SSH-yhteyttä tai ajaa mitään käsin — koko virta on Git-pohjainen, kuten haluttu.
+
+**Käytännön muistilista jokaiselle julkaisulle:**
+```bash
+# tässä hakemistossa
+# 1. tee muutokset
+# 2. nosta versio config.yaml:ssa (esim. 1.0.1 → 1.0.2)
+git add -A
+git commit -m "kuvaus muutoksesta"
+git push origin master
+# → mene HA:n Lisäosakauppaan, Reload, Update, Restart
+```
+
+### 10.2 Näyttö-Pi (kioski) — asennus ja vaatimukset
+
+Näyttö-Pi (Raspberry Pi 3 + kosketusnäyttö) ei ole osa tätä repositoriota — se on erillinen laite, jolla ajetaan pelkkää selainta kioskitilassa osoitteessa `http://<ha-palvelimen-ip>:8000`.
+
+**Vaatimus — kosketuksella herätys:** Näytön tulee olla oletuksena sammutettuna/himmennettynä (energiansäästö, ruudunpolton esto), ja **herätä päälle heti kun sitä kosketetaan**. Tämä ei ole tällä hetkellä toteutettu, ja se toteutetaan kokonaan Näyttö-Pi:n käyttöjärjestelmätasolla (X11/Wayland-näytönhallinta), ei Kotitaulun sovelluskoodissa — sovellus itsessään ei tiedä mitään näytön virtatilasta.
+
+Tyypillinen toteutustapa Raspberry Pi OS + X11 -yhdistelmällä:
+- `xset` hallitsee DPMS-tilaa (`xset dpms 0 0 <sekuntia>` sammuttaa näytön X sekunnin jouten olon jälkeen)
+- Kosketustapahtuma X-palvelimessa lasketaan "aktiviteetiksi" ja herättää näytön automaattisesti DPMS:n omalla logiikalla — tämä toimii yleensä suoraan ilman lisäkonfigurointia, jos näyttöajuri raportoi kosketuksen oikein X:lle
+- Jos kosketus ei herätä näyttöä luotettavasti (yleinen ongelma joillain kosketuspaneeleilla/ajureilla), tarvitaan erillinen taustaprosessi joka kuuntelee `/dev/input/eventX`-laitetta (esim. `evtest`/`libinput`) ja pakottaa `xset dpms force on` kosketuksen yhteydessä
+
+Tämä osio jätetään tässä vaiheessa **vaatimustasolle** — konkreettinen toteutus (käytettävä näyttöohjain, Raspberry Pi OS -versio, X11 vs. Wayland) pitää selvittää Näyttö-Pi:n nykyisestä asennuksesta ennen kuin ratkaisu voidaan koodata.
+
 ## 11. Laajennettavuus — uuden tietolähteen lisääminen
 
 1. Luo `backend/fetchers/uusi.py`, toteuta `async def fetch() -> list[FetchResult]`.
@@ -193,3 +262,4 @@ Sovellus avautuu osoitteessa `http://localhost:8000`. Manuaalinen haku: `curl -X
   - `fetcher_log`-taulua ei näytetä käyttöliittymässä; virheiden näkeminen vaatii tietokannan tai lokien tarkastelua suoraan.
   - Ei käyttäjäkohtaista näkymää tai muokattavuutta ajonaikaisesti — kaikki asetukset ovat konfiguraatiotiedostoissa.
   - `kauhavan_seurakunta`-fetcher on kovakoodattu yhdelle sivustolle eikä ole yleiskäyttöinen kuten `web_scraper`.
+  - Näyttö-Pi:n kosketusherätys (näytön automaattinen sammutus + herätys kosketuksesta) **ei ole vielä toteutettu** — ks. kohta 10.2. Tämä on tiedossa oleva jatkokehitystarve, ei tämän repon koodin piirissä.
