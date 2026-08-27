@@ -231,18 +231,84 @@ git push origin master
 # → mene HA:n Lisäosakauppaan, Reload, Update, Restart
 ```
 
-### 10.2 Näyttö-Pi (kioski) — asennus ja vaatimukset
+### 10.2 Näyttö-Pi (kioski) — asennus ja toteutus
 
-Näyttö-Pi (Raspberry Pi 3 + kosketusnäyttö) ei ole osa tätä repositoriota — se on erillinen laite, jolla ajetaan pelkkää selainta kioskitilassa osoitteessa `http://<ha-palvelimen-ip>:8000`.
+Näyttö-Pi on **Raspberry Pi 3 Model B Rev 1.2** (hostname `Raspikoti`, käyttäjä `jve52`), käyttöjärjestelmä **Raspberry Pi OS, Debian GNU/Linux 13 (trixie)**, näytönhallinta **LightDM + labwc** (wlroots-pohjainen Wayland-kompositori — ei X11). Näyttö-Pi ei ole osa tätä repositoriota — se on erillinen laite, jolla ajetaan pelkkää selainta kioskitilassa osoitteessa `http://homeassistant.local:8000`.
 
-**Vaatimus — kosketuksella herätys:** Näytön tulee olla oletuksena sammutettuna/himmennettynä (energiansäästö, ruudunpolton esto), ja **herätä päälle heti kun sitä kosketetaan**. Tämä ei ole tällä hetkellä toteutettu, ja se toteutetaan kokonaan Näyttö-Pi:n käyttöjärjestelmätasolla (X11/Wayland-näytönhallinta), ei Kotitaulun sovelluskoodissa — sovellus itsessään ei tiedä mitään näytön virtatilasta.
+**Toteutettu ja fyysisesti testattu (2026-08-27):** näyttö sammuu 5 min joutenolon jälkeen ja **herää luotettavasti kosketuksesta**.
 
-Tyypillinen toteutustapa Raspberry Pi OS + X11 -yhdistelmällä:
-- `xset` hallitsee DPMS-tilaa (`xset dpms 0 0 <sekuntia>` sammuttaa näytön X sekunnin jouten olon jälkeen)
-- Kosketustapahtuma X-palvelimessa lasketaan "aktiviteetiksi" ja herättää näytön automaattisesti DPMS:n omalla logiikalla — tämä toimii yleensä suoraan ilman lisäkonfigurointia, jos näyttöajuri raportoi kosketuksen oikein X:lle
-- Jos kosketus ei herätä näyttöä luotettavasti (yleinen ongelma joillain kosketuspaneeleilla/ajureilla), tarvitaan erillinen taustaprosessi joka kuuntelee `/dev/input/eventX`-laitetta (esim. `evtest`/`libinput`) ja pakottaa `xset dpms force on` kosketuksen yhteydessä
+Kokoonpano on `~/.config/labwc/autostart` (labwc lukee tämän session-käynnistyksessä `/etc/xdg/labwc/autostart`-oletuksen sijaan/lisäksi):
 
-Tämä osio jätetään tässä vaiheessa **vaatimustasolle** — konkreettinen toteutus (käytettävä näyttöohjain, Raspberry Pi OS -versio, X11 vs. Wayland) pitää selvittää Näyttö-Pi:n nykyisestä asennuksesta ennen kuin ratkaisu voidaan koodata.
+```sh
+#!/bin/sh
+
+/usr/bin/kanshi &
+
+swayidle -w \
+  timeout 300 'wlopm --off HDMI-A-1' \
+  resume 'wlopm --on HDMI-A-1' &
+
+URL="http://homeassistant.local:8000"
+
+# Odota kunnes Kotitaulu oikeasti vastaa (verkko/mDNS ei aina ole heti valmis kirjautumisessa)
+until curl -fs -o /dev/null "$URL"; do
+  sleep 2
+done
+
+# Silmukka: käynnistää Chromiumin uudelleen jos se kaatuu
+(
+  while true; do
+    rm -f "$HOME/.config/chromium/SingletonLock"
+    chromium \
+      --kiosk "$URL" \
+      --ozone-platform=wayland \
+      --disable-gpu \
+      --disable-features=TranslateUI \
+      --password-store=basic \
+      --noerrdialogs \
+      --disable-infobars \
+      --disable-session-crashed-bubble \
+      --disable-restore-session-state \
+      --check-for-update-interval=31536000
+    sleep 3
+  done
+) &
+```
+
+Lisäksi Chromiumille on asetettu yrityskäytäntö (`/etc/chromium/policies/managed/kotitaulu.json`), koska `--disable-features=TranslateUI` ei riittänyt uusimmassa Chromium-versiossa (149.x) piilottamaan käännösponnahdusikkunaa luotettavasti:
+
+```json
+{
+  "TranslateEnabled": false,
+  "DefaultNotificationsSetting": 2,
+  "PasswordManagerEnabled": false,
+  "BrowserSignin": 0,
+  "SyncDisabled": true
+}
+```
+
+**Ratkaistut ongelmat pystytyksen aikana** (hyödyllistä jos jokin niistä toistuu myöhemmin):
+
+| Ongelma | Syy | Korjaus |
+|---|---|---|
+| Kioski ei käynnistynyt ollenkaan | `~/.config/labwc/autostart` puuttui kokonaan | Luotu skripti yllä |
+| Chromium näytti täysin valkoisen ruudun | GPU-rasterointi + `--use-angle=gles` -yhdistelmä ei toimi luotettavasti Pi3:n VC4-ajurilla Waylandin alla | `--disable-gpu --ozone-platform=wayland` |
+| "Unlock Keyring" -ikkuna jumitti koko näytön joka bootissa | Autologin ei syötä oikeaa salasanaa → GNOME-avainnippu jää lukkoon, Chromium yrittää käyttää sitä salasanavarastona | `--password-store=basic` (tiedostopohjainen, ei keyring-integraatiota) |
+| Käännösponnahdusikkuna jäi näkyviin | `--disable-features=TranslateUI`-lippu ei riitä nykyversiossa | Chromium-policy `TranslateEnabled: false` |
+| `systemd-run --user`-pohjainen käynnistys renderöi valkoisen ruudun täydellä kylmällä bootilla (vaikka toimi "lämpimänä" testinä) | Epäilty race condition GPU/Wayland-alustuksessa systemd-run-kontekstissa tuoreen boottauksen aikana | Palattu suoraan autostart-skriptin lapsiprosessina ajettavaan Chromiumiin, kaatumisenkorjaus `while true`-silmukalla systemd-unitin sijaan |
+| LightDM:n autologin laukeaa vain **kerran** koneen käynnistyessä | Jos labwc/istunto päättyy kesken (ei vain Chromium kaatuu, vaan koko istunto), LightDM palaa kirjautumisruutuun eikä autologinaa uudelleen automaattisesti | **Ei vielä korjattu** — tunnettu jäännösriski, ks. alla |
+
+**Tunnettu jäännösriski:** `while true`-silmukka autostart-skriptissä palauttaa Chromiumin jos *se itse* kaatuu, mutta ei auta jos koko labwc-istunto/Wayland-kompositori kaatuu — silloin näyttö jää LightDM:n kirjautumisruutuun ja vaatii fyysisen/etäkirjautumisen tai koneen uudelleenkäynnistyksen. Tämä on hyväksytty riski toistaiseksi (Wayland-kompositorin kaatuminen on harvinaisempaa kuin yksittäisen sovelluksen kaatuminen), mutta jos se osoittautuu ongelmaksi käytännössä, ratkaisuna olisi joko LightDM:n autologin-käytöksen muuttaminen toistuvaksi, tai koko kioskin ajaminen systemd-käynnistetyn `greetd`/`cage`-tyyppisen minimalistisen session kautta LightDM:n sijaan.
+
+**Etäylläpito:** Näyttö-Pi:hin on konfiguroitu SSH-avainautentikointi ja käyttäjälle `jve52` salasanaton sudo (`/etc/sudoers.d/010_jve52-nopasswd`), jotta jatkokehitys ja vianetsintä onnistuu ilman fyysistä pääsyä laitteeseen.
+
+### 10.3 Todellinen virransäästö — jatkokehitystarve
+
+**Havainto (2026-08-27):** `wlopm --off` katkaisee vain HDMI-videosignaalin — paneelin oma taustavalo **ei sammu** tästä (laitteessa ei ole `/sys/class/backlight/`-rajapintaa eikä `ddcutil`/`cec-client`-tukea asennettuna, joten käyttöjärjestelmästä ei voi ohjata taustavaloa suoraan). Nykyinen ratkaisu antaa siis luotettavan kosketusherätyksen, mutta **ei säästä virtaa** — näyttö näyttää sinisen "ei signaalia" -kuvan jatkuvasti sammutettunakin.
+
+Koska kosketusanturi tarvitsee virtaa toimiakseen, täydellinen virrankatkaisu ja välitön kosketusherätys ovat keskenään ristiriidassa — molempia ei voi saada samalla mekanismilla. Suunniteltu ratkaisu: **HA-ohjattu älypistorasia** (esim. Shelly Plug S, tai Zigbee-vaihtoehto jos Zigbee-verkko on jo käytössä) näytön omassa virtajohdossa — **ei** Pi3:n virransyötössä, jotta Pi pysyy koko ajan käynnissä ja Kotitaulu valmiiksi ladattuna. Aikataulutettu HA-automaatio katkaisisi virran esim. yöksi; `kanshi` (jo autostart-skriptissä) hoitaa näytön uudelleentunnistuksen kun HDMI-virta palautuu.
+
+**Tila:** älypistorasiaa ei ole vielä hankittu — tämä on avoin jatkokehitystehtävä. Kun laite on hankittu ja pariutettu HA:han, automaatio pitää vielä rakentaa.
 
 ## 11. Laajennettavuus — uuden tietolähteen lisääminen
 
