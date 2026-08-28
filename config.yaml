@@ -1,6 +1,6 @@
 name: "Kotitaulu"
 description: "Kodin päivittäinen muistitaulu — kalenteri, sää, HA, uutiset"
-version: "1.1.2"
+version: "1.2.0"
 slug: "kotitaulu"
 init: false
 homeassistant_api: true

@@ -148,3 +148,24 @@ loadItems();
 updateClock();
 setInterval(loadItems, 60_000);
 setInterval(updateClock, 1_000);
+
+// ── Piilotettu ele: 5 napautusta otsikkoon avaa kioskin alla olevan
+// työpöydän (esim. ylläpitoa varten). Toimii vain kioski-Pi:n omassa
+// selaimessa, koska kohde on "localhost" — muilta laitteilta pyyntö
+// menisi niiden omaan koneeseen, ei kioski-Pi:hin. Ei vaadi tokenia,
+// koska kioskiohjaus hyväksyy tunnistautumattomat pyynnöt vain
+// loopback-osoitteesta — verkkotopologia itsessään on suoja.
+let tapCount = 0;
+let tapTimer = null;
+
+document.querySelector("header h1").addEventListener("click", () => {
+  tapCount += 1;
+  clearTimeout(tapTimer);
+  tapTimer = setTimeout(() => { tapCount = 0; }, 2000);
+
+  if (tapCount >= 5) {
+    tapCount = 0;
+    fetch("http://localhost:9191/exit-kiosk", { method: "POST" }).catch(() => {});
+    // hiljainen epäonnistuminen — ei kioski-Pi, ei mitään tapahdu
+  }
+});
