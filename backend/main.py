@@ -2,7 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -24,6 +24,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Kotitaulu", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def no_cache_headers(request: Request, call_next):
+    # Kioski-Chromium pysyy auki päiviä/viikkoja kerrallaan — ilman tätä
+    # selaimen levyvälimuisti voi pitää vanhaa index.html/style.css/app.js:ää
+    # "tuoreena" heuristiikan perusteella vaikka palvelin olisi jo päivittynyt.
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.get("/health")
