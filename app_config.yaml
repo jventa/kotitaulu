@@ -26,7 +26,10 @@ sources:
       - sensor.ruuvitag_1cf0_lampotila
       - sensor.ruuvitag_9d2f_temperature
       - sensor.nordpool
-      - climate.huonetermostaatti
+      - entity: climate.huonetermostaatti
+        attribute: current_temperature
+        name: "Huonelämpötila"
+        unit: "°C"
     todo_lists:
       - todo.shopping_list
 

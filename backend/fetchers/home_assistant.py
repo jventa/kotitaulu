@@ -25,22 +25,38 @@ async def fetch() -> list[FetchResult]:
     results = []
 
     async with httpx.AsyncClient(timeout=10) as client:
-        # Entiteettien tilat
-        for entity_id in cfg.get("entities", []):
+        # Entiteettien tilat. Listan alkio voi olla joko pelkkä entiteetti-ID
+        # (string, lukee state-kentän) tai dict jos halutaan lukea attribuutti:
+        #   - entity: climate.huonetermostaatti
+        #     attribute: current_temperature
+        #     name: "Huonelämpötila"   # valinnainen, korvaa friendly_namen
+        #     unit: "°C"               # valinnainen, attribuuteilla ei ole omaa yksikköä
+        for entity_cfg in cfg.get("entities", []):
+            if isinstance(entity_cfg, str):
+                entity_id, attribute, name_override, unit_override = entity_cfg, None, None, None
+            else:
+                entity_id = entity_cfg["entity"]
+                attribute = entity_cfg.get("attribute")
+                name_override = entity_cfg.get("name")
+                unit_override = entity_cfg.get("unit")
+
             resp = await client.get(f"{HA_URL}/api/states/{entity_id}", headers=headers)
-            if resp.status_code == 200:
-                data = resp.json()
+            if resp.status_code != 200:
+                continue
+
+            data = resp.json()
+            attrs = data.get("attributes", {})
+            friendly = name_override or attrs.get("friendly_name", entity_id)
+
+            if attribute:
+                value = attrs.get(attribute, "?")
+                detail = f"{value} {unit_override or ''}".strip()
+            else:
                 state = data.get("state", "?")
-                attrs = data.get("attributes", {})
-                friendly = attrs.get("friendly_name", entity_id)
-                unit = attrs.get("unit_of_measurement", "")
-                results.append(
-                    FetchResult(
-                        source=SOURCE,
-                        title=friendly,
-                        detail=_format_state(state, unit),
-                    )
-                )
+                unit = unit_override or attrs.get("unit_of_measurement", "")
+                detail = _format_state(state, unit)
+
+            results.append(FetchResult(source=SOURCE, title=friendly, detail=detail))
 
         # Todo-listat
         for list_entity in cfg.get("todo_lists", []):
