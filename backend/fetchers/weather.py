@@ -32,6 +32,7 @@ async def fetch() -> list[FetchResult]:
         f"&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum"
         f"&timezone={LOCATION.get('timezone', 'Europe/Helsinki')}"
         f"&forecast_days=3"
+        f"&windspeed_unit=ms"
     )
 
     async with httpx.AsyncClient(timeout=10) as client:
@@ -49,7 +50,7 @@ async def fetch() -> list[FetchResult]:
         FetchResult(
             source=SOURCE,
             title=f"{desc} {temp}°C",
-            detail=f"Tuuli {wind} km/h",
+            detail=f"Tuuli {wind} m/s",
             priority="normal",
         )
     )
