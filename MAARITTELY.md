@@ -125,7 +125,7 @@ Jokainen fetcher toteuttaa yhteisen rajapinnan `async def fetch() -> list[FetchR
 | `google_calendar` | Google Calendar API v3 | Kaikkien käyttäjän kalenterien tapahtumat seuraavan N päivän ajalta, duplikaatit poistettu ID:n perusteella, aikajärjestyksessä | `days_ahead` | aina `normal` |
 | `gmail` | Gmail API | Viimeisimmät viestit annetulla hakulausekkeella (oletus `is:unread is:important`) | `max_results`, `query` | `high` jos Gmail-labeli `IMPORTANT` |
 | `home_assistant` | HA REST API (`/api/states`, `/api/services/todo/get_items`) | Valittujen entiteettien nykyarvot (lämpötila, sähkön hinta, termostaatti…) + valittujen todo-listojen avoimet (`needs_action`) rivit | `entities[]`, `todo_lists[]` | aina `normal` |
-| `weather` | Open-Meteo (avainton) | Nykysää (lämpötila, sääkoodi, tuuli) + 2 seuraavan päivän ennuste (min/max, sade) | sijainti `LOCATION` (lat/lon/timezone) | aina `normal` |
+| `weather` | FMI avoin data (opendata.fmi.fi/wfs, HARMONIE-malli, avainton) | Nykysää (lämpötila, weathersymbol3-kuvaus, tuuli m/s) + 2 seuraavan päivän ennuste (min/max, sadesumma) | sijainti `LOCATION` (lat/lon/timezone) | aina `normal` |
 | `rss` | `feedparser` | Uusimmat otsikot määritetyistä RSS-syötteistä | `feeds[]` (url, title, max_items) | aina `normal` |
 | `stocks` | Yahoo Finance (`yfinance`) | Viimeisin kurssi + muutos-% edelliseen päätöskurssiin | `symbols[]` | `high` jos \|muutos-%\| ≥ 5 |
 | `web_scraper` | Yleiskäyttöinen HTML-kaavinta (`httpx` + BeautifulSoup, valinnaisesti ScrapingBee JS-renderöintiin) | CSS-selectorilla poimitut otsikot/linkit miltä tahansa sivustolta | `sites[]` (url, selector, title, max_items, render_js) | aina `normal` |
