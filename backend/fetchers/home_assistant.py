@@ -6,6 +6,16 @@ from backend.fetchers import FetchResult
 SOURCE = "home_assistant"
 
 
+def _format_state(state: str, unit: str) -> str:
+    """EUR/kWh -> snt/kWh, koska sähkön hinta on tutumpi senteissä."""
+    if unit == "EUR/kWh":
+        try:
+            return f"{float(state) * 100:.2f} snt/kWh"
+        except ValueError:
+            pass
+    return f"{state} {unit}".strip()
+
+
 async def fetch() -> list[FetchResult]:
     cfg = SOURCES.get("home_assistant", {})
     if not cfg.get("enabled", True):
@@ -28,7 +38,7 @@ async def fetch() -> list[FetchResult]:
                     FetchResult(
                         source=SOURCE,
                         title=friendly,
-                        detail=f"{state} {unit}".strip(),
+                        detail=_format_state(state, unit),
                     )
                 )
 
